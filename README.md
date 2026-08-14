@@ -19,6 +19,8 @@ Initial development environment established.
 \- VS Code configured
 
 \- Python installed
+\- AWS CLI installed
+\- Terraform installed
 
 \- GitHub repository connected
 
