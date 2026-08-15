@@ -276,5 +276,8 @@ aws sts get-caller-identity
 3. Confirm the returned identity is the intended lab identity
 4. Document the final credential method
 5. Begin Phase 1 — VPC foundation
+final discovery to the IAM troubleshooting document:
+
+The initial EC2 AccessDenied was ultimately traced to mess-bg-lab not being an effective member of CloudLab-PowerUser. Once group membership was corrected and temporary credentials were refreshed, ec2:DescribeVpcs succeeded. The iam:GetUser denial remained expected because PowerUserAccess excludes IAM administration
 
 **Do not use the AWS root user for Terraform, AWS CLI operations, Python/boto3 automation, or routine lab activity.**
