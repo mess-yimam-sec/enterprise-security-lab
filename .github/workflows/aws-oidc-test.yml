@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-     - name: Show GitHub repository IDs
+      - name: Show GitHub repository information
         run: |
           echo "repository=${{ github.repository }}"
           echo "owner_id=${{ github.repository_owner_id }}"
