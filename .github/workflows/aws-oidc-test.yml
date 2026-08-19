@@ -12,6 +12,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+     - name: Show GitHub repository IDs
+        run: |
+          echo "repository=${{ github.repository }}"
+          echo "owner_id=${{ github.repository_owner_id }}"
+          echo "repo_id=${{ github.repository_id }}"
+          echo "ref=${{ github.ref }}"
       - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v6.2.3
         with:
