@@ -1,32 +1,19 @@
-# AWS credentials and local configuration
-.aws/
-credentials
-config
-
-# Environment files
-.env
-.env.*
-!.env.example
-
 # Terraform
 .terraform/
 *.tfstate
 *.tfstate.*
-crash.log
-crash.*.log
+*.tfplan
+
+# Sensitive local files
 *.tfvars
 *.tfvars.json
-!*.tfvars.example
 
-# Private keys and certificates
-*.pem
-*.key
-*.p12
-*.pfx
+# Crash logs
+crash.log
+crash.*.log
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# VS Code local settings
-.vscode/settings.json
+# Local override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
