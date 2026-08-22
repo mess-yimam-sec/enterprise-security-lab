@@ -11,7 +11,7 @@ terraform {
 
 provider "aws" {
   region  = "us-east-1"
-  profile = "mess-bg-lab-bootstrap"
+  #profile = "mess-bg-lab-bootstrap"
 }
 resource "aws_vpc" "security_lab" {
   cidr_block           = "10.10.0.0/16"
