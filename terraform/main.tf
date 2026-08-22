@@ -64,4 +64,5 @@ resource "aws_route" "security_lab_public_internet" {
   route_table_id         = aws_route_table.security_lab_public.id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.security_lab.id
+  # Managed by Terraform for the Enterprise Security Lab
 }
