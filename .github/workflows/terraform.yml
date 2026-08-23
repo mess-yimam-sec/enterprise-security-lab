@@ -1,5 +1,9 @@
-name: Terraform Plan
 
+name: Setup Terraform
+  uses: hashicorp/setup-terraform@v3
+  with:
+    terraform_version: 1.15.0
+name: Terraform Plan
 on:
   push:
     paths:
