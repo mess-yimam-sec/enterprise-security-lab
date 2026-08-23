@@ -1,6 +1,16 @@
-name: Terraform Plan
+name: Terraform CI
 
 on:
+  push:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+
+  pull_request:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+
   workflow_dispatch:
 
 permissions:
@@ -27,7 +37,10 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
         with:
-           terraform_version: 1.15.8
+          terraform_version: 1.15.8
+
+      - name: Terraform Version
+        run: terraform version
 
       - name: Terraform Init
         working-directory: terraform
@@ -35,7 +48,7 @@ jobs:
 
       - name: Terraform Format Check
         working-directory: terraform
-        run: terraform fmt -check
+        run: terraform fmt -check -diff -no-color
 
       - name: Terraform Validate
         working-directory: terraform
