@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v6.2.3
@@ -25,7 +25,9 @@ jobs:
         run: aws sts get-caller-identity
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
+        with:
+           terraform_version: 1.15.8
 
       - name: Terraform Init
         working-directory: terraform
