@@ -1,496 +1,256 @@
+# Enterprise Security Lab
 
+Here I want to show you what happens when you build a cloud environment with security in mind from the beginning?
 
-\# Enterprise Security Lab
+This project is my hands-on **Enterprise Security Lab** — an evolving AWS environment where I am putting cloud security, identity, Infrastructure as Code, CI/CD, monitoring, automation, and incident response into practice.
 
+Rather than building isolated demos, I’m connecting the pieces so that each layer supports the next one.
 
+The project is intentionally being built in public, one milestone at a time.
 
-A hands-on cloud security engineering lab focused on AWS identity, infrastructure, secure CI/CD, monitoring, automation, and incident response.
+## Where the project is today
 
+The foundation is now in place.
 
+I have built and tested:
 
-The project is designed to demonstrate how security controls work together across the full cloud engineering lifecycle, from identity and infrastructure provisioning to CI/CD and incident response.
+* AWS IAM, MFA, and STS authentication
+* IAM roles and least-privilege access
+* GitHub Actions → AWS OIDC federation
+* Terraform-managed AWS networking
+* A protected `main` branch and pull-request workflow
+* GitHub Actions Terraform CI
+* Remote Terraform state in Amazon S3
+* S3 versioning and public-access protection for Terraform state
 
+The current focus is **secure Infrastructure as Code and cloud security engineering**.
 
+## Start here
 
-\## Project Status
+If you are new to the project, these are the best places to begin:
 
+**Identity and CI/CD**
 
+GitHub Actions authenticates to AWS through OIDC rather than storing long-lived AWS access keys.
 
-Active development
+**Infrastructure**
 
+Terraform provisions and manages the AWS networking foundation.
 
+**State management**
 
-\### Completed milestones
+Terraform state is stored remotely in Amazon S3 with versioning and public-access protection.
 
+**Git workflow**
 
+Infrastructure changes move through feature branches, pull requests, automated checks, and a protected `main` branch.
 
-\* AWS IAM, MFA, and STS authentication
-
-\* IAM roles and least-privilege access
-
-\* GitHub Actions → AWS OIDC federation
-
-\* Terraform-based AWS VPC networking
-
-\* Public subnet, route table, Internet Gateway, and routing
-
-\* Protected `main` branch with pull-request workflow
-
-\* GitHub Actions Terraform CI
-
-\* Terraform remote state using Amazon S3
-
-\* S3 versioning and public-access protection for Terraform state
-
-
-
-\### Current focus
-
-
-
-Cloud Security Engineering and secure Infrastructure as Code
-
-
-
-\## Architecture
-
-
+## How the pieces fit together
 
 ```text
-
 Developer
-
-&#x20;  |
-
-&#x20;  v
-
+    |
+    v
 Feature Branch
-
-&#x20;  |
-
-&#x20;  v
-
+    |
+    v
 Pull Request
-
-&#x20;  |
-
-&#x20;  v
-
+    |
+    v
 GitHub Actions
-
-&#x20;  |
-
-&#x20;  +---- GitHub OIDC
-
-&#x20;  |         |
-
-&#x20;  |         v
-
-&#x20;  |      AWS IAM Role
-
-&#x20;  |         |
-
-&#x20;  |         v
-
-&#x20;  |    Temporary AWS Credentials
-
-&#x20;  |
-
-&#x20;  +---- Terraform CI
-
-&#x20;            |
-
-&#x20;            +---- Terraform Init
-
-&#x20;            +---- Terraform Format
-
-&#x20;            +---- Terraform Validate
-
-&#x20;            +---- Terraform Plan
-
-&#x20;            |
-
-&#x20;            v
-
-&#x20;       Amazon S3 Remote State
-
-&#x20;            |
-
-&#x20;            v
-
-&#x20;       AWS Infrastructure
-
+    |
+    +---- GitHub OIDC
+    |         |
+    |         v
+    |      AWS IAM Role
+    |         |
+    |         v
+    |   Temporary Credentials
+    |
+    +---- Terraform CI
+              |
+              +---- Init
+              +---- Format
+              +---- Validate
+              +---- Plan
+              |
+              v
+        Amazon S3 Remote State
+              |
+              v
+        AWS Infrastructure
 ```
 
+This is the part of the project I find most valuable: the security controls are connected instead of treated as separate exercises.
 
+## A closer look at the current infrastructure
 
-\## Security Focus
-
-
-
-This lab emphasizes practical cloud-security engineering rather than isolated tool usage.
-
-
-
-Key areas include:
-
-
-
-\* Identity and access management
-
-\* MFA and temporary AWS credentials
-
-\* IAM roles and least privilege
-
-\* GitHub OIDC federation
-
-\* Secure CI/CD authentication
-
-\* Infrastructure as Code
-
-\* Terraform remote state
-
-\* Network segmentation
-
-\* Logging and monitoring
-
-\* Security automation
-
-\* Incident response
-
-
-
-\## Technology Stack
-
-
-
-| Area                   | Technologies                                      |
-
-| ---------------------- | ------------------------------------------------- |
-
-| Cloud                  | AWS                                               |
-
-| Infrastructure as Code | Terraform                                         |
-
-| Identity               | AWS IAM, STS, GitHub OIDC                         |
-
-| CI/CD                  | GitHub Actions                                    |
-
-| Automation             | Python, PowerShell                                |
-
-| CLI                    | AWS CLI                                           |
-
-| Version Control        | Git, GitHub                                       |
-
-| Security               | CloudTrail, GuardDuty, Security Hub, VPC controls |
-
-| Operating Systems      | Windows, Linux                                    |
-
-
-
-\## Repository Structure
-
-
+Terraform currently manages the first layer of AWS networking:
 
 ```text
-
-enterprise-security-lab/
-
-├── .github/
-
-│   └── workflows/
-
-│       ├── aws-oidc-test.yml
-
-│       └── terraform.yml
-
-│
-
-├── terraform/
-
-│   ├── main.tf
-
-│   ├── variables.tf
-
-│   ├── outputs.tf
-
-│   └── .terraform.lock.hcl
-
-│
-
-├── docs/
-
-│   └── ...
-
-│
-
-└── README.md
-
-```
-
-
-
-\## Current Terraform Infrastructure
-
-
-
-The Terraform configuration currently manages:
-
-
-
-```text
-
 VPC
-
 └── Public Subnet
-
-&#x20;   ├── Route Table
-
-&#x20;   ├── Route Table Association
-
-&#x20;   └── Internet Gateway Route
-
+    ├── Route Table
+    ├── Route Table Association
+    ├── Internet Gateway
+    └── Internet Route
 ```
 
+This is the starting point for a larger network security design.
 
+The next stages will introduce more restrictive network architecture, private resources, controlled egress, and additional visibility.
 
-Terraform state is stored remotely in Amazon S3 with versioning and public-access protection enabled.
+## Secure CI/CD
 
+One of the first major security decisions in the lab was avoiding long-lived AWS credentials in GitHub Actions.
 
-
-\## CI/CD Security Model
-
-
-
-GitHub Actions does not use long-lived AWS access keys.
-
-
-
-Instead:
-
-
+The workflow is:
 
 ```text
-
 GitHub Actions
-
-&#x20;     |
-
-&#x20;     v
-
+      |
+      v
 GitHub OIDC
-
-&#x20;     |
-
-&#x20;     v
-
+      |
+      v
 AWS IAM OIDC Provider
-
-&#x20;     |
-
-&#x20;     v
-
+      |
+      v
 Scoped IAM Role
-
-&#x20;     |
-
-&#x20;     v
-
+      |
+      v
 STS Temporary Credentials
-
-&#x20;     |
-
-&#x20;     v
-
-AWS API
-
+      |
+      v
+AWS APIs
 ```
 
+The goal is simple: GitHub gets temporary credentials for the work it needs to perform instead of relying on permanent access keys.
 
-
-This reduces the need to store long-lived AWS credentials in GitHub and allows the workflow to authenticate using short-lived credentials.
-
-
-
-\## Git Workflow
-
-
-
-The repository uses a protected `main` branch.
-
-
-
-Changes follow:
-
-
+This is also tied to the repository workflow:
 
 ```text
-
 Feature Branch
-
-&#x20;     |
-
-&#x20;     v
-
-Commit
-
-&#x20;     |
-
-&#x20;     v
-
+      |
+      v
 Pull Request
-
-&#x20;     |
-
-&#x20;     v
-
-Terraform CI
-
-&#x20;     |
-
-&#x20;     v
-
-Review / Checks
-
-&#x20;     |
-
-&#x20;     v
-
+      |
+      v
+Automated Terraform Checks
+      |
+      v
+Review
+      |
+      v
 Squash Merge
-
-&#x20;     |
-
-&#x20;     v
-
-main
-
+      |
+      v
+Protected main
 ```
 
+## Why I am building this
 
+I wanted a project that goes beyond learning individual AWS services or memorizing Terraform syntax.
 
-\## Roadmap
-
-
-
-\### Cloud Infrastructure
-
-
-
-\* Private subnet architecture
-
-\* NAT and controlled egress
-
-\* Security groups
-
-\* Network ACLs
-
-\* VPC Flow Logs
-
-
-
-\### AWS Security
-
-
-
-\* CloudTrail
-
-\* GuardDuty
-
-\* Security Hub
-
-\* Centralized logging
-
-\* KMS encryption
-
-\* Additional least-privilege IAM roles
-
-
-
-\### Automation
-
-
-
-\* Python security automation
-
-\* Incident detection
-
-\* Incident-response workflows
-
-\* PowerShell AWS/Windows operational automation
-
-
-
-\### CI/CD
-
-
-
-\* Terraform plan as a required pull-request check
-
-\* Controlled Terraform deployment workflow
-
-\* Environment protection
-
-\* Least-privilege deployment roles
-
-
-
-\## Project Philosophy
-
-
-
-The goal is not simply to learn individual AWS or DevOps tools.
-
-
-
-The goal is to understand how:
-
-
+The real goal is to understand how these areas work together:
 
 ```text
-
 Identity
-
-&#x20;  +
-
+   +
 Infrastructure
-
-&#x20;  +
-
+   +
 Security
-
-&#x20;  +
-
+   +
 CI/CD
-
-&#x20;  +
-
-Automation
-
-&#x20;  +
-
+   +
 Monitoring
-
-&#x20;  +
-
+   +
+Automation
+   +
 Incident Response
-
 ```
 
+That means some of the most useful moments in this project have actually been the failures: broken trust policies, credential issues, Terraform state problems, branch conflicts, and CI failures.
 
+Each one has become part of the learning process.
 
-fit together to form a practical cloud security engineering workflow.
+## Technology
 
+| Area                   | Technology                                             |
+| ---------------------- | ------------------------------------------------------ |
+| Cloud                  | AWS                                                    |
+| Infrastructure as Code | Terraform                                              |
+| Identity               | IAM, STS, GitHub OIDC                                  |
+| CI/CD                  | GitHub Actions                                         |
+| Automation             | Python, PowerShell                                     |
+| CLI                    | AWS CLI                                                |
+| Version Control        | Git, GitHub                                            |
+| Security               | IAM, CloudTrail, GuardDuty, Security Hub, VPC controls |
 
+## Repository structure
 
-\## Follow the Project
+```text
+enterprise-security-lab/
+├── .github/
+│   └── workflows/
+│       ├── aws-oidc-test.yml
+│       └── terraform.yml
+│
+├── terraform/
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   └── .terraform.lock.hcl
+│
+├── docs/
+│   └── ...
+│
+└── README.md
+```
 
+The `docs/` directory will continue to grow as individual security controls, troubleshooting lessons, and architecture decisions are documented.
 
+## What's next
 
-The project is developed incrementally, with infrastructure changes reviewed through GitHub pull requests.
+The roadmap is intentionally incremental.
 
+### Cloud infrastructure
 
+* Private subnet architecture
+* Controlled egress
+* Security groups
+* Network ACLs
+* VPC Flow Logs
 
-Questions, ideas, and architectural feedback are welcome through GitHub Issues and Discussions.
-CI validation checkpoint
+### AWS security
 
+* CloudTrail
+* GuardDuty
+* Security Hub
+* Centralized logging
+* KMS encryption
+* Additional least-privilege IAM roles
 
+### Automation
+
+* Python security automation
+* Detection and response workflows
+* Incident-response automation
+* PowerShell AWS and Windows operations
+
+### CI/CD
+
+* Least-privilege Terraform state access
+* Controlled Terraform deployment workflow
+* Environment protection
+* Separate permissions for validation and deployment
+
+## Follow the build
+
+This project is intentionally being developed incrementally.
+
+The idea is not to jump straight to a finished architecture. Each milestone is implemented, tested, documented, and then carried forward into the next one.
+
+If you are interested in cloud security, AWS, Terraform, IAM, or secure CI/CD, feel free to explore the repository, open an Issue, start a Discussion, or share an approach you would use differently.
+
+**The project is still being built — and that is the point.**
