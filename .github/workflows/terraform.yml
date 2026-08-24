@@ -1,6 +1,16 @@
 name: Terraform Plan
 
 on:
+  push:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+
+  pull_request:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+
   workflow_dispatch:
 
 permissions:
@@ -25,6 +35,12 @@ jobs:
         run: aws sts get-caller-identity
 
       - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: Terraform Version
+        run: terraform version
         uses: hashicorp/setup-terraform@v4
         with:
            terraform_version: 1.15.8
@@ -35,7 +51,7 @@ jobs:
 
       - name: Terraform Format Check
         working-directory: terraform
-        run: terraform fmt -check
+        run: terraform fmt -check -diff -no-color
 
       - name: Terraform Validate
         working-directory: terraform
