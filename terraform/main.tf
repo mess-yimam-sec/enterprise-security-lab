@@ -1,5 +1,5 @@
 terraform {
-    required_providers {
+  required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 6.0"
@@ -8,18 +8,16 @@ terraform {
 
   required_version = ">= 1.15.0"
   backend "s3" {
-  bucket       = "enterprise-security-lab-tfstate-149957954264"
-  key          = "terraform/terraform.tfstate"
-  region       = "us-east-1"
-  use_lockfile = true
-}
+    bucket       = "enterprise-security-lab-tfstate-149957954264"
+    key          = "terraform/terraform.tfstate"
+    region       = "us-east-1"
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
-<<<<<<< HEAD
   region = "us-east-1"
-  
->>>>>>> origin/main
+
 }
 resource "aws_vpc" "security_lab" {
   cidr_block           = "10.10.0.0/16"
@@ -72,9 +70,8 @@ resource "aws_route" "security_lab_public_internet" {
   route_table_id         = aws_route_table.security_lab_public.id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.security_lab.id
-<<<<<<< HEAD
+
   # Managed by Terraform for the Enterprise Security Lab
 }
-=======
-}
->>>>>>> origin/main
+
+
