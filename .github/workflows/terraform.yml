@@ -1,12 +1,21 @@
 name: Terraform Plan
 
 on:
+  push:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+
+  pull_request:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+
   workflow_dispatch:
 
 permissions:
   id-token: write
   contents: read
-
 jobs:
   terraform-plan:
     runs-on: ubuntu-latest
