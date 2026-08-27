@@ -35,15 +35,12 @@ jobs:
         run: aws sts get-caller-identity
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.15.8
 
       - name: Terraform Version
         run: terraform version
-        uses: hashicorp/setup-terraform@v4
-        with:
-           terraform_version: 1.15.8
 
       - name: Terraform Init
         working-directory: terraform
