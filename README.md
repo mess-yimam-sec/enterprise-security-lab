@@ -28,6 +28,7 @@ The current focus is **secure Infrastructure as Code and cloud security engineer
 ## Start here
 
 If you are new to the project, these are the best places to begin:
+CI/CD validation is now tested through GitHub Actions using AWS OIDC and remote Terraform state.
 
 **Identity and CI/CD**
 
