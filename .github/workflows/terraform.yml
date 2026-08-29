@@ -34,7 +34,7 @@ jobs:
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
-            - name: Setup Terraform
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.15.8
