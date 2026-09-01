@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
 
     environment:
-      name: terraform-deploy
+     name: terraform-deploy
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
- debug-github-oidc-claims
+         debug-github-oidc-claims
       - name: Inspect GitHub OIDC claims
         shell: bash
         run: |
