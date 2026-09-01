@@ -46,8 +46,8 @@ jobs:
             ref
           }'
           - name: Configure AWS credentials with OIDC
-        uses: aws-actions/configure-aws-credentials@v6.2.3
-        with:
+           uses: aws-actions/configure-aws-credentials@v6.2.3
+            with:
           role-to-assume: arn:aws:iam::149957954264:role/EnterpriseSecurityLab-TerraformDeploy
           aws-region: us-east-1
 
