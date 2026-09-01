@@ -19,12 +19,13 @@ jobs:
     runs-on: ubuntu-latest
 
     environment:
-     name: terraform-deploy
+debug-github-oidc-claims
+      name: terraform-deploy
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-         
+        
       - name: Inspect GitHub OIDC claims
         shell: bash
         run: |
@@ -45,6 +46,12 @@ jobs:
             environment,
             ref
           }'
+
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+
           - name: Configure AWS credentials with OIDC
            uses: aws-actions/configure-aws-credentials@v6.2.3
             with:
@@ -68,4 +75,6 @@ jobs:
 
       - name: Terraform Apply
         working-directory: terraform
+        run: terraform apply -auto-approve
+
         run: terraform apply -auto-approve
