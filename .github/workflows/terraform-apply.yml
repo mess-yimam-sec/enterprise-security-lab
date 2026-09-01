@@ -24,6 +24,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
       - name: Inspect GitHub OIDC claims
         shell: bash
         run: |
