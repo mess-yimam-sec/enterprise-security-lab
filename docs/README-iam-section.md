@@ -1,6 +1,6 @@
 # IAM Authentication Troubleshooting
 
-Before beginning the networking lab, we documented the AWS IAM/CLI authentication issues encountered while establishing the lab identity.
+Before beginning the networking lab, I documented the AWS IAM/CLI authentication issues encountered while establishing the lab identity.
 
 See:
 
