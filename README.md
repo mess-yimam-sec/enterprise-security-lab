@@ -86,12 +86,14 @@ This is the part of the project I find most valuable: the security controls are 
 ## A closer look at the current infrastructure
 
 Terraform currently manages the first layer of AWS networking:
+
 VPC
 └── Public Subnet
     ├── Route Table
     ├── Route Table Association
     ├── Internet Gateway
     └── Internet Route
+    
 This is the starting point for a larger network security design.
 The next stages will introduce more restrictive network architecture, private resources, controlled egress, and additional visibility.
 ## Secure CI/CD
