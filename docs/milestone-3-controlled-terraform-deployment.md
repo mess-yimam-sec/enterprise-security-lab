@@ -1,187 +1,109 @@
-# Milestone 3 --- Controlled Terraform Deployment
+# Milestone 3: Controlled Terraform Deployment
 
-## Overview
+GitHub OIDC + protected deployment environment + Terraform Apply
 
-Milestone 3 extends the secure Terraform CI/CD foundation by introducing
-a controlled deployment path from GitHub Actions to AWS.
+## Purpose
 
-The goal was to move beyond Terraform validation and planning and
-securely perform infrastructure deployment without storing long-lived
-AWS credentials in GitHub.
+This milestone extends the Enterprise Security Lab from Terraform validation and planning into controlled infrastructure deployment.
 
-## Project Journey
+The goal is to allow GitHub Actions to apply Terraform changes to AWS using temporary credentials, a dedicated deployment role, and an approval gate instead of long-lived AWS access keys.
 
-This project is being developed incrementally, with each milestone
-building on the previous security engineering work.
+---- What was built-----
 
-**Previous:** [Milestone 2 --- Secure Terraform
-CI/CD](./milestone-2-secure-terraform-cicd.md)
+* A separate GitHub Actions workflow for Terraform deployment.
+* A dedicated AWS IAM role: `EnterpriseSecurityLab-TerraformDeploy`.
+* GitHub OIDC authentication to AWS STS for temporary deployment credentials.
+* A protected GitHub environment named `terraform-deploy`.
+* Manual approval before Terraform Apply can proceed.
+* Terraform initialization against the existing Amazon S3 remote state.
+* Automated `terraform apply` after approved changes reach the protected `main` branch.
+* Separation between Terraform validation/planning and Terraform deployment permissions.
 
-**Current:** Milestone 3 --- Controlled Terraform Deployment
+---- Work flow at a glance ------
 
-**Next:** Milestone 4 --- AWS Network Security
-
-------------------------------------------------------------------------
-
-## What I Built
-
--   Separate Terraform Plan and Apply workflows
--   Dedicated AWS deployment role:
-    `EnterpriseSecurityLab-TerraformDeploy`
--   GitHub Actions authentication to AWS using OIDC
--   AWS STS temporary credentials
--   Protected GitHub environment: `terraform-deploy`
--   Approval before Terraform deployment
--   Terraform remote state integration
--   Automated Terraform Apply after approved changes reach `main`
-
-## Deployment Flow
-
-``` text
-Terraform Change
-       |
-       v
-Pull Request
-       |
-       v
-Terraform Plan / Validation
-       |
-       v
-Protected Main Branch
-       |
-       v
-Merge
-       |
-       v
-terraform-deploy Environment
-       |
-       v
-Deployment Approval
-       |
-       v
+Developer
+  ↓
+Feature branch
+  ↓
+Pull request
+  ↓
+Terraform CI
+  ├─ fmt
+  ├─ validate
+  └─ plan
+  ↓
+Protected main
+  ↓
+terraform-deploy environment
+  ↓
+Deployment approval
+  ↓
 GitHub OIDC
-       |
-       v
+  ↓
 AWS STS
-       |
-       v
+  ↓
 EnterpriseSecurityLab-TerraformDeploy
-       |
-       v
-Temporary AWS Credentials
-       |
-       v
-Terraform Init
-       |
-       v
-Terraform Apply
-       |
-       v
-AWS Infrastructure
-```
+  ↓
+Temporary AWS credentials
+  ↓
+Terraform init / apply
+  ↓
+AWS infrastructure
+/
 
-## Identity and Trust
+---- Why this matters----
 
-The deployment workflow does not rely on stored AWS access keys.
+* Credential security: GitHub Actions does not require stored long-lived AWS access keys.
+* Workload identity: GitHub OIDC allows AWS to verify the identity of the deployment workflow.
+* Temporary access: AWS STS provides short-lived credentials for the deployment session.
+* Separation of duties: Terraform planning and deployment use separate IAM roles.
+* Deployment control: the `terraform-deploy` environment introduces an approval point before infrastructure changes are applied.
+* Change control: infrastructure changes continue to move through feature branches, pull requests, checks, and protected `main`.
+* State consistency: the deployment workflow uses the same Amazon S3 remote Terraform state as the rest of the project.
 
-GitHub Actions requests an OIDC token, and AWS STS uses the trusted
-identity to issue temporary credentials for the deployment role.
+---- Current implementation----
 
-The AWS trust relationship is restricted using GitHub OIDC claims
-associated with the repository and the protected `terraform-deploy`
-environment.
+| Component            | Implementation                                                  |
+| -------------------- | --------------------------------------------------------------- |
+| CI identity          | GitHub OIDC → AWS STS                                           |
+| Terraform Plan role  | `EnterpriseSecurityLab-GitHubOIDC`                              |
+| Terraform Apply role | `EnterpriseSecurityLab-TerraformDeploy`                         |
+| Deployment control   | GitHub `terraform-deploy` environment                           |
+| Approval             | Required before Terraform Apply                                 |
+| Terraform state      | Amazon S3 remote backend                                        |
+| Deployment           | GitHub Actions → Terraform Apply                                |
+| Repository control   | Feature branches, pull requests, protected `main`, squash merge |
 
-This creates a stronger trust boundary than allowing every workflow in
-the repository to assume the deployment role.
+---- Lessons learned----
 
-## Separation of Responsibilities
+* A successful OIDC configuration depends on both IAM permissions and the role's trust relationship.
+* GitHub environments affect the OIDC subject presented to AWS.
+* Inspecting the actual OIDC claims is more useful than broadening permissions when troubleshooting federation failures.
+* Temporary diagnostic steps should be removed after the identity problem is understood.
+* Small YAML indentation or duplication errors can prevent a deployment workflow from running correctly.
+* Squash merges can cause local and remote Git histories to diverge even when the intended changes have already reached `main`.
+* Deployment permissions should be separated from validation permissions rather than giving every CI workflow infrastructure-changing access.
 
-The project uses separate AWS roles for different stages of the
-Terraform lifecycle.
+----- Result-----
 
-### Terraform Plan / CI
+The lab now has a controlled Terraform deployment path:
 
-`EnterpriseSecurityLab-GitHubOIDC`
+**Pull request → Terraform Plan → protected main → deployment approval → GitHub OIDC → AWS STS → deployment role → Terraform Apply**
 
-Used for Terraform validation and planning.
+This completes the CI/CD deployment foundation and provides a controlled path for future infrastructure changes.
 
-### Terraform Deployment
+----- Project journey-----
 
-`EnterpriseSecurityLab-TerraformDeploy`
+* Previous: Milestone 2 --- Secure Terraform CI/CD: https://github.com/mess-yimam-sec/enterprise-security-lab/blob/main/docs/milestone-2-secure-terraform-cicd.md
+* Current: Milestone 3 — Controlled Terraform Deployment: https://github.com/mess-yimam-sec/enterprise-security-lab/blob/main/docs/milestone-3-controlled-terraform-deployment.md
+* Next: Milestone 4 — AWS Network Security
 
-Used by the controlled Apply workflow after the deployment environment
-requirements are satisfied.
+---- Next step----
 
-This separation limits deployment privileges to the workflow that
-actually requires them.
+I will Extend the Terraform-managed AWS network with security-focused architecture, including private subnets, Security Groups, Network ACLs, controlled egress, and VPC Flow Logs.
+---- References----
 
-## Troubleshooting --- GitHub OIDC Trust
-
-The deployment initially failed with:
-
-`Not authorized to perform sts:AssumeRoleWithWebIdentity`
-
-Instead of broadening AWS permissions, I temporarily inspected the OIDC
-claims generated by GitHub Actions.
-
-This showed the identity presented by the workflow when using the
-protected GitHub deployment environment.
-
-The AWS role trust relationship was then restricted to the expected OIDC
-subject and audience.
-
-After the trust relationship was verified, the temporary diagnostic step
-was removed.
-
-## Troubleshooting --- Git and Workflow Configuration
-
-This milestone also exposed practical CI/CD issues including:
-
--   YAML indentation errors
--   Duplicate workflow configuration
--   Local and remote Git history divergence after squash merges
--   Temporary diagnostic code that needed to be removed after
-    troubleshooting
-
-The workflow was cleaned and tested again after the OIDC trust issue was
-resolved.
-
-## Security Principles Practiced
-
--   Prefer temporary credentials over long-lived AWS access keys
--   Use workload identity federation with OIDC
--   Restrict AWS role trust relationships
--   Separate validation and deployment permissions
--   Protect deployment environments
--   Require approval before infrastructure deployment
--   Maintain remote Terraform state
--   Protect the main branch with pull requests
--   Troubleshoot authorization failures using evidence before expanding
-    permissions
-
-## Result
-
-The controlled Terraform deployment workflow was successfully executed
-end-to-end.
-
-The project now has the following deployment path:
-
-**GitHub PR → Terraform validation → protected main → deployment
-approval → GitHub OIDC → AWS STS → deployment role → Terraform Apply**
-
-This provides the CI/CD security foundation for the next phase of the
-lab.
-
-------------------------------------------------------------------------
-
-## Continue the Project Journey
-
-← [Milestone 2 --- Secure Terraform
-CI/CD](./milestone-2-secure-terraform-cicd.md)
-
-**Next:** Milestone 4 --- AWS Network Security
-
-Planned topics include private subnet architecture, Security Groups,
-Network ACLs, controlled egress, and VPC Flow Logs.
-
-[Back to Enterprise Security Lab](../README.md)
+* https://github.com/mess-yimam-sec/enterprise-security-lab/blob/main/README.md
+* Secure Terraform CI/CD:  https://github.com/mess-yimam-sec/enterprise-security-lab/blob/main/docs/milestone-2-secure-terraform-cicd.md
+* GitHub Actions OIDC with AWS: https://github.com/mess-yimam-sec/enterprise-security-lab/blob/main/docs/github-oidc-aws-federation.md
+* Terraform S3 backend:  https://github.com/mess-yimam-sec/enterprise-security-lab/blob/main/README.md
