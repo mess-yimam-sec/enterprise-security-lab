@@ -1,283 +1,242 @@
 # IAM Authentication Troubleshooting
-
-## Project
-
-**Repository:** `mess-big/enterprise-security-lab`
-
-**Project principle:** Build → Automate → Secure → Validate → Document
-
 ## Purpose
+This document captures the AWS IAM and CLI authentication problems I worked through while establishing the identity foundation for the
+Enterprise Security Lab.
+The goal was not just to get the AWS CLI working. I wanted to understand why each failure happened and how authentication, authorization, MFA,
+IAM policies, group membership, and temporary credentials fit together.
 
-This document records the IAM/CLI authentication troubleshooting performed before beginning the networking portion of the Enterprise Security Lab.
+These lessons became part of the security foundation for the rest of the
+project.
+------------------------------------------------------------------------
+## Environment
+The troubleshooting started with:
+-   AWS CLI `2.36.21`
+-   Windows 11
+-   AWS Region `us-east-1`
+-   Lab IAM user `mess-bg-lab`
 
-The goal was not simply to make the CLI work, but to understand the distinction between:
-
-- Authentication vs. authorization
-- Console authentication vs. CLI authentication
-- Passkey/WebAuthn MFA vs. TOTP MFA
-- Long-lived IAM access keys vs. temporary credentials
-- Administrative/root access vs. least-privilege lab access
-
-## Initial state
-
-The AWS CLI was installed and configured for:
-
-- AWS CLI: `2.36.21`
-- Operating system: Windows 11
-- Region: `us-east-1`
-
-Initial command:
-
-```powershell
-aws sts get-caller-identity
-```
-
-Result:
-
-```text
+At this stage, the AWS CLI did not yet have a working credential path.
+Running:
+powershell
+> aws sts get-caller-identity
+returned:
 NoCredentials: Unable to locate credentials
-```
 
-`aws configure list` showed:
+Rather than immediately creating permanent access keys, I used the authentication problems as an opportunity to understand the available
+credential options and build a safer approach.
+------------------------------------------------------------------------
+## Authentication vs. Authorization
+One of the most important lessons from this work was learning to separate authentication from authorization.
 
-```text
-access_key: not set
-secret_key: not set
-region: us-east-1
-```
+Authentication answers: **Who are you?**
+Authorization answers: **What are you allowed to do?**
 
-No AWS infrastructure had been created at this stage.
+This distinction became important several times during the lab. I could successfully sign in as an IAM user but still receive `AccessDenied` for certain IAM or EC2 operations.
 
----
+That did not necessarily mean authentication was broken. It often meant the authenticated identity did not have permission to perform that
+particular action.
+------------------------------------------------------------------------
+## AWS CLI Browser Authentication
+I initially tested the AWS CLI browser sign-in flow.
 
-## Issue 1 — `aws login` failed through the local browser callback
+The browser authentication reached AWS successfully but eventually returned to a localhost callback similar to:
 
-The initial `aws login` browser flow reached AWS authentication but returned to a localhost callback similar to:
-
-```text
 127.0.0.1:<port>/oauth/callback
-```
+The browser then reported that the connection was refused.
+I verified the AWS CLI version and then tested:
+powershell
+>aws login --remote
+This allowed me to continue investigating the authentication path without depending on the local browser callback.
+------------------------------------------------------------------------
+## MFA Authentication
+The remote authentication flow reached the IAM-user sign-in process, but MFA authentication returned an invalid-request error.
 
-The browser reported that the connection was refused.
+At the same time, the IAM user could successfully sign in to the AWS Management Console using the same account credentials and an existing
+passkey. That helped narrow the problem down. The IAM user itself was valid, and the password was not the issue. The difference was in the MFA mechanism being used by the authentication workflow.
+------------------------------------------------------------------------
+## Passkey and TOTP
+The IAM user already had a passkey configured for AWS console authentication.
 
-### Investigation
-
-The AWS CLI was confirmed to be current:
-
-```text
-aws-cli/2.36.21
-```
-
-Therefore, CLI version incompatibility was ruled out.
-
-`aws login --remote` was tested to bypass the localhost callback.
-
----
-
-## Issue 2 — `aws login --remote` failed during MFA
-
-The remote authentication flow successfully reached the IAM-user authentication process:
-
-```text
-AWS login
-  ↓
-IAM user
-  ↓
-Username/password
-  ↓
-MFA
-  ↓
-Authentication failed — Invalid request
-```
-
-The IAM user could successfully sign into the normal AWS Management Console using the same account credentials and a saved passkey.
-
-This narrowed the issue to the authentication mechanism used by the CLI sign-in flow rather than a basic IAM-user login failure.
-
----
-
-## Issue 3 — Passkey vs. CLI MFA
-
-The important discovery was AWS's documented limitation around passkeys/security keys.
-
-Passkeys/security keys can be used for AWS Management Console MFA, but they are not supported as MFA mechanisms for AWS CLI/API authentication in the same way that TOTP is.
-
-Therefore:
-
-```text
-AWS Console
-  ↓
-IAM user + password
-  ↓
-Passkey
-  ↓
-SUCCESS
-```
-
-while the CLI authentication path could fail when attempting to use the passkey.
-
-### Decision
-
-Do not remove the existing passkey.
-
-Instead, add a TOTP authenticator as a second MFA method.
-
-Target design:
-
-```text
+I kept that passkey in place and added an authenticator-app TOTP method rather than removing an authentication method that was already working.
+The resulting approach was:
 mess-bg-lab
 │
 ├── Passkey
-│   └── AWS Console authentication
+│   └── Console authentication
 │
 └── TOTP authenticator
-    └── CLI-compatible MFA workflow
-```
+    └── MFA workflow requiring TOTP
 
----
-
-## Issue 4 — `iam:ListUsers` Access Denied
-
-While logged in as `mess-bg-lab`, the IAM Users page displayed an access-denied message for:
-
-```text
+The TOTP authenticator was tested successfully through AWS.
+This was a useful reminder that an authentication method that works for one AWS access path should not automatically be assumed to work the same way for every CLI or API credential workflow.
+------------------------------------------------------------------------
+## IAM `ListUsers` Access Denied
+While signed in as `mess-bg-lab`, the IAM Users page returned an authorization error for:
 iam:ListUsers
-```
 
-This initially looked like the `mess-bg-lab` user might not exist.
+At first, this made it look as though the lab user might not exist or that something was wrong with the login.
 
-The actual explanation was authorization.
+The actual issue was simpler: the identity was authenticated, but it did not have permission to list IAM users.
+I deliberately did not solve this by attaching broad administrative permissions just to make the console page work. That would have hidden
+the real authorization issue and weakened the least-privilege approach I wanted for the lab.
+------------------------------------------------------------------------
+## IAM Group Permissions
+The lab identity used IAM group membership to receive permissions.
+One of the policies involved in the authentication setup was:
 
-The lab IAM user did not have permission to list all IAM users. The user was therefore able to authenticate but was not authorized to perform the administrative IAM operation required to populate the Users page.
-
-This is an important security lesson:
-
-> Authentication proves who you are. Authorization determines what you are allowed to do.
-
-The correct response was **not** to grant broad administrative permissions merely to make the IAM console page work.
-
-Root access was used only for IAM administration.
-
----
-
-## IAM group configuration
-
-The lab user `mess-bg-lab` was created and placed in an IAM group.
-
-The group already had:
-
-```text
 SignInLocalDevelopmentAccess
-```
 
-attached.
+A useful lesson here was that permissions inherited through a group do not need to be duplicated directly on the IAM user.
+Later troubleshooting also showed how important it is to verify effective group membership rather than assuming a policy is active
+simply because the group itself exists.
+------------------------------------------------------------------------
+## EC2 Authorization Failure
+A later problem occurred when the lab identity attempted to call EC2
+APIs.
+The identity received an `AccessDenied` response for operations such as:
 
-This policy supports the AWS CLI browser sign-in workflow. The policy being attached through the group is valid; it did not need to be duplicated directly on the user.
+ec2:DescribeVpcs
+The final cause was not a broken AWS CLI login.
 
-The `iam:ListUsers` denial is separate from this policy because `SignInLocalDevelopmentAccess` is not an IAM administration policy.
+`mess-bg-lab` was not an effective member of the expected `CloudLab-PowerUser` group.
 
----
+After correcting the group membership and refreshing the temporary credentials, the EC2 request succeeded.
+This connected several concepts:
+Authentication
+      |
+      v
+IAM identity
+      |
+      v
+Group membership
+      |
+      v
+Effective permissions
+      |
+      v
+Temporary credentials
+      |
+      v
+AWS API authorization
 
-## MFA remediation
+A valid login alone was not enough. The permissions associated with the identity also had to be correct, and refreshed temporary credentials had to reflect the corrected authorization state.
+------------------------------------------------------------------------
+## Expected IAM Denials
+After the group-membership issue was corrected, some IAM administrative
+operations could still be denied.
+For example:
+iam:GetUser
+A denial like this was not necessarily a problem.
+The lab identity was intended for normal lab operations rather than unrestricted IAM administration.
+This reinforced an important principle for the project:
 
-While signed in with administrative/root access, the existing passkey was retained.
+> A denied action can be evidence that least privilege is working as > intended.
 
-A second MFA method was added:
+The goal is not to eliminate every `AccessDenied` message. The goal is to make sure the identity has the permissions it actually needs and that denied operations are intentional.
+------------------------------------------------------------------------
+## Temporary Credential Strategy
+I intentionally avoided treating long-lived AWS access keys as the default solution to the authentication problems.
+The project moved toward temporary credentials and role-based access wherever practical.
+The working pattern became:
 
-**Authenticator app / TOTP**
+Lab identity
+      |
+      v
+Authentication
+      |
+      v
+Temporary AWS credentials
+      |
+      v
+AWS STS identity verification
+      |
+      v
+Authorized AWS API access
 
-The hardware MFA option was not selected.
+I used:
+ powershell
+>aws sts get-caller-identity
+as an important verification step.
 
-The TOTP authenticator was then tested through the AWS Management Console.
+Instead of assuming credentials were correct because a login appeared successful, I could verify which AWS identity was actually being used before performing infrastructure operations.
+This same preference for short-lived credentials later carried into the GitHub Actions design, where GitHub OIDC and AWS STS are used instead of storing permanent AWS access keys in GitHub.
+------------------------------------------------------------------------
+## Final Working State
+The original authentication and authorization issues were resolved.The final troubleshooting sequence showed that several different problems had been involved rather than one single IAM failure:
+Missing CLI credentials
+        |
+        v
+Browser authentication troubleshooting
+        |
+        v
+MFA investigation
+        |
+        v
+Passkey / TOTP distinction
+        |
+        v
+IAM authorization troubleshooting
+        |
+        v
+Group membership correction
+        |
+        v
+Temporary credential refresh
+        |
+        v
+AWS API access verified
+The `ec2:DescribeVpcs` failure was ultimately resolved by correcting the effective `CloudLab-PowerUser` group membership and refreshing the temporary credentials.
 
-### Result
+The remaining IAM administrative denials were treated separately and evaluated based on whether the lab identity actually required those permissions. This was more useful than simply adding broader permissions until every
+command succeeded.
+------------------------------------------------------------------------
+## Credential Security Decisions
+Several security decisions came out of this troubleshooting work:
+-   Do not use the AWS root user for Terraform, AWS CLI operations,
+    Python/boto3 automation, or routine lab activity.
+-   Prefer temporary credentials where practical.
+-   Do not store passwords, MFA secrets, QR codes, session tokens, or
+    AWS credentials in Git.
+-   Verify the active AWS identity before performing infrastructure
+    operations.
+-   Do not add administrative permissions merely to remove an expected
+    `AccessDenied` message.
+-   Use IAM roles and scoped permissions as the lab grows.
 
-**TOTP verification succeeded.**
+These decisions became part of the broader security model used throughout the Enterprise Security Lab.
+------------------------------------------------------------------------
+## Lessons Learned
+### Authentication and authorization are separate problems
+A successful login proves an identity. It does not mean that identity can perform every AWS action.
 
-This confirms that the new authenticator is correctly enrolled and generating valid MFA codes.
+### Troubleshoot the denied action before expanding permissions
+An `AccessDenied` response should be investigated in context. Sometimes a permission is genuinely missing; other times the denial is exactly what the security design should produce.
 
-Current state:
+### Effective permissions matter
+Having a policy attached to a group is useful only if the intended identity actually receives that group's permissions.
 
-```text
-AWS CLI installed                 ✓
-AWS region: us-east-1             ✓
-mess-bg-lab IAM user              ✓
-IAM group                         ✓
-SignInLocalDevelopmentAccess      ✓
-Passkey MFA                       ✓
-TOTP MFA                          ✓
-Console TOTP verification         ✓
-CLI credential verification       → Next step
-VPC deployment                    → After CLI authentication
-```
+### Temporary credentials need to reflect permission changes
+After changing IAM permissions or group membership, existing temporary credentials may not represent the new authorization state. Refreshing the session can be part of validating the change.
 
----
+### MFA methods serve different authentication workflows
+A passkey working for console authentication does not mean every CLI or API workflow will use it in the same way. Testing the actual access path matters.
 
-## Credential-security decisions
+### Root access should remain administrative
+Routine lab activity should use dedicated identities and roles rather than the AWS root user.
 
-No long-lived access key was created during this troubleshooting session.
+### Troubleshooting is part of the project
+The failures were useful because they forced me to understand the security model instead of simply following a successful setup path.
 
-This was intentional.
+The process involved reading AWS errors, identifying whether a failure was authentication or authorization, checking IAM policy scope and group membership, refreshing credentials, and validating the final identity.
 
-The project will prefer short-lived credentials where practical and will avoid placing credentials, MFA secrets, QR codes, session tokens, or passwords in Git.
-
-If an IAM access key becomes necessary for the chosen CLI workflow, it will be:
-
-1. Created deliberately
-2. Stored securely
-3. Used only as required
-4. Used to obtain temporary/MFA-backed credentials where applicable
-5. Never committed to Git
-
----
-
-## Lessons learned
-
-### 1. Authentication and authorization are different
-
-A successful IAM login does not imply permission to perform every IAM operation.
-
-### 2. Console MFA and CLI MFA are not interchangeable
-
-A passkey can successfully protect console access while not being usable as the MFA mechanism required by a particular CLI authentication workflow.
-
-### 3. Least privilege matters during troubleshooting
-
-Adding `AdministratorAccess` simply because an IAM page reports `AccessDenied` would hide the underlying authorization model and weaken the lab's security posture.
-
-### 4. Root should be administrative, not operational
-
-Root was used to manage the IAM configuration. The lab's normal AWS operations will use a dedicated IAM identity rather than root.
-
-### 5. Troubleshooting is part of the project
-
-The authentication problems are intentionally documented because they demonstrate real Cloud Security skills:
-
-- Reading AWS errors
-- Separating authentication from authorization
-- Understanding MFA mechanisms
-- Understanding IAM policy scope
-- Avoiding unnecessary privilege escalation
-- Choosing credential mechanisms deliberately
-
----
-
-## Next step
-
-Before creating any VPC resources:
-
-1. Establish a secure CLI credential workflow for `mess-bg-lab`
-2. Run:
-
-```powershell
-aws sts get-caller-identity
-```
-
-3. Confirm the returned identity is the intended lab identity
-4. Document the final credential method
-5. Begin Phase 1 — VPC foundation
-final discovery to the IAM troubleshooting document:
-
-The initial EC2 AccessDenied was ultimately traced to mess-bg-lab not being an effective member of CloudLab-PowerUser. Once group membership was corrected and temporary credentials were refreshed, ec2:DescribeVpcs succeeded. The iam:GetUser denial remained expected because PowerUserAccess excludes IAM administration
-
-**Do not use the AWS root user for Terraform, AWS CLI operations, Python/boto3 automation, or routine lab activity.**
+That experience became part of the foundation for the later Terraform, GitHub OIDC, and CI/CD work.
+------------------------------------------------------------------------
+## Related Documentation
+-   [Enterprise Security Lab](../README.md)
+-   [Documentation Index](./README.md)
+-   [GitHub OIDC → AWS Federation](./github-oidc-aws-federation.md)
+-   [Terraform CI/CD Validation](./terraform-cicd-validation.md)
+-   [Milestone 2 --- Secure Terraform
+    CI/CD](./milestone-2-secure-terraform-cicd.md)
+-   [Milestone 3 --- Controlled Terraform
+    Deployment](./milestone-3-controlled-terraform-deployment.md)
