@@ -29,8 +29,6 @@ temporary credentials, and GitHub OIDC federation.
     Troubleshooting](./iam-authentication-troubleshooting.md)
 -   [Identity and Authentication Session
     Summary](./identity-and-authentication-session-summary.md)
--   [IAM README Notes](./README-iam-section.md)
-
 One of the main lessons from this work was learning to separate
 **authentication, authorization, and trust**.
 
