@@ -1,6 +1,6 @@
-GitHub Actions → AWS OIDC Federation
+#GitHub Actions → AWS OIDC Federation
 
-Purpose
+##Purpose
 
 This document captures how I connected GitHub Actions to AWS using
 OpenID Connect (OIDC) in the Enterprise Security Lab.
@@ -224,31 +224,25 @@ mess-yimam-sec
 Repository:
 enterprise-security-lab
 
-For the first proof of concept, I left the branch restriction open while
-testing the federation path.
+For the first proof of concept, I left the branch restriction open while testing the federation path.
 
-The initial trust policy generated through the AWS setup used a
-repository subject pattern similar to:
+The initial trust policy generated through the AWS setup used a repository subject pattern similar to:
 
 repo:mess-yimam-sec/enterprise-security-lab:*
 
 At the time, that looked reasonable.
 
-It turned out not to match the actual OIDC subject GitHub was sending
-for this repository.
+It turned out not to match the actual OIDC subject GitHub was sending for this repository.
 
 That mismatch became the main troubleshooting issue in this exercise.
 
 GitHub Actions Workflow
-
 The proof-of-concept workflow was created at:
-
 .github/workflows/aws-oidc-test.yml
 
 The important parts looked like this:
 
 name: AWS OIDC Test
-
 on:
   workflow_dispatch:
 
@@ -508,14 +502,10 @@ AWS STS
 Temporary credentials
 
 The GitHub workflow does not need a long-lived AWS access key.
-
 That was the main security improvement I wanted from this exercise.
-
 What OIDC Does --- and Does Not Do
-
 OIDC establishes the workload identity and allows AWS to evaluate
 whether that external identity is trusted.
-
 OIDC does not decide what the workflow can do inside AWS.
 
 Those responsibilities remain separate:
@@ -540,60 +530,34 @@ Troubleshooting Checklist
 When I see:
 
 Not authorized to perform sts:AssumeRoleWithWebIdentity
-
 I check the federation chain in this order:
-
 The workflow has id-token: write.
-
 The GitHub OIDC provider exists in AWS.
-
 The provider audience is sts.amazonaws.com.
-
 The workflow references the correct IAM role.
-
 The role trusts the GitHub OIDC provider.
-
 The aud claim matches sts.amazonaws.com.
-
 The sub condition matches GitHub's actual subject.
+Repository owner and repository IDs are correct when used in the subject.
 
-Repository owner and repository IDs are correct when used in the
-subject.
-
-The branch, environment, or other subject context matches the
-workflow.
-
+The branch, environment, or other subject context matches the workflow.
 The role's permissions allow the AWS API operation being tested.
-
-I do not treat AdministratorAccess or an unrestricted subject
-condition as troubleshooting shortcuts. If the trust fails, I want to
-know which identity condition is wrong.
+I do not treat AdministratorAccess or an unrestricted subject condition as troubleshooting shortcuts. If the trust fails, I want to know which identity condition is wrong.
 
 How This Evolved Into Terraform CI/CD
-
-The OIDC proof of concept became the authentication foundation for the
-Terraform pipeline.
+The OIDC proof of concept became the authentication foundation for the Terraform pipeline.
 
 The project later added:
 
 Terraform validation and planning in GitHub Actions
-
 Remote Terraform state in Amazon S3
-
 S3 versioning and public-access protection
-
 Protected main branch and pull-request workflow
-
 Separate permissions for Terraform Plan and Apply
-
 Dedicated Terraform deployment role
-
 Protected terraform-deploy GitHub environment
-
 Manual approval before deployment
-
 Automated Terraform Apply using temporary AWS credentials
-
 The deployment path now builds on the same identity model:
 
 GitHub Actions
@@ -616,9 +580,7 @@ Terraform
       v
 AWS infrastructure
 
-The original EnterpriseSecurityLab-GitHubOIDC role remains part of the
-CI/Plan side of the project, while Terraform Apply uses the separate
-deployment role:
+The original EnterpriseSecurityLab-GitHubOIDC role remains part of the CI/Plan side of the project, while Terraform Apply uses the separate deployment role:
 
 EnterpriseSecurityLab-TerraformDeploy
 
@@ -636,8 +598,7 @@ The deployment identity was verified as:
 
 repo:mess-yimam-sec@314676558/enterprise-security-lab@1327860875:environment:terraform-deploy
 
-The deployment role trust policy was restricted to that exact subject
-together with:
+The deployment role trust policy was restricted to that exact subject together with:
 
 aud = sts.amazonaws.com
 
@@ -659,8 +620,7 @@ Protected GitHub environment
    v
 EnterpriseSecurityLab-TerraformDeploy
 
-This gave me a cleaner separation between validating infrastructure
-changes and actually deploying them.
+This gave me a cleaner separation between validating infrastructure changes and actually deploying them.
 
 Security Decisions
 
@@ -671,20 +631,17 @@ Do not store long-lived AWS credentials in GitHub Actions.
 
 Use AWS STS temporary credentials.
 
-Restrict role trust using the actual OIDC audience and subject
-claims.
+Restrict role trust using the actual OIDC audience and subject claims.
 
 Keep trust policy and permissions policy responsibilities separate.
 
-Give CI and deployment different permissions when their
-responsibilities differ.
+Give CI and deployment different permissions when their responsibilities differ.
 
 Use protected GitHub environments for sensitive deployment paths.
 
 Verify the assumed AWS identity with aws sts get-caller-identity.
 
-Do not print OIDC tokens or credential material during
-troubleshooting.
+Do not print OIDC tokens or credential material during troubleshooting.
 
 Do not weaken trust conditions just to make a failed workflow pass.
 
@@ -708,8 +665,7 @@ later Terraform CI/CD pipeline.
 
 What began as a test of GitHub-to-AWS federation now supports a design
 where infrastructure changes can be validated with one set of
-permissions and deployed through a separate, protected path with
-temporary AWS credentials.
+permissions and deployed through a separate, protected path with temporary AWS credentials.
 
 Related Documentation
 
@@ -717,13 +673,10 @@ Enterprise Security Lab
 
 Documentation Index
 
-IAM Authentication
-Troubleshooting
+IAM Authentication Troubleshooting
 
 Terraform CI/CD Validation
 
-Milestone 2 --- Secure Terraform
-CI/CD
+Milestone 2 --- Secure Terraform CI/CD
 
-Milestone 3 --- Controlled Terraform
-Deployment
+Milestone 3 --- Controlled Terraform Deployment
