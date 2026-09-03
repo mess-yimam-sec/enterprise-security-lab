@@ -9,8 +9,6 @@ Rather than building isolated demos, I'm connecting the pieces so that each laye
 incrementally, with each milestone adding another part of the security architecture.
 
 ## Where the project is today
-
-The foundation is now in place.
 The identity, Infrastructure as Code, and CI/CD foundation is now in
 place.
 So far, I have built and tested:
@@ -48,7 +46,6 @@ Terraform state is stored remotely in Amazon S3 with versioning and public-acces
 Infrastructure changes move through feature branches, pull requests, automated checks, and a protected `main` branch.
 
 ## How the pieces fit together
-```text
 Developer
     |
     v
@@ -80,13 +77,11 @@ GitHub Actions
               |
               v
         AWS Infrastructure
-```
 This is the part of the project I find most valuable: the security controls are connected instead of treated as separate exercises.
 
 ## A closer look at the current infrastructure
 
 Terraform currently manages the first layer of AWS networking:
-
 VPC
 └── Public Subnet
     ├── Route Table
@@ -215,5 +210,3 @@ This project is intentionally being developed incrementally.
 
 The idea is not to jump straight to a finished architecture. Each milestone is implemented, tested, documented, and then carried forward into the next one.
 If you are interested in cloud security, AWS, Terraform, IAM, or secure CI/CD, feel free to explore the repository, open an Issue, start a Discussion, or share an approach you would use differently.
-
-**The project is still being built — and that is the point.**
