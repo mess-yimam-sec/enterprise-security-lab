@@ -42,7 +42,18 @@ resource "aws_subnet" "security_lab_public" {
     Project = "enterprise-security-lab"
   }
 }
+# Private subnet
+resource "aws_subnet" "security_lab_private" {
+  vpc_id                  = aws_vpc.security_lab.id
+  cidr_block              = "10.10.2.0/24"
+  availability_zone       = "us-east-1a"
+  map_public_ip_on_launch = false
 
+  tags = {
+    Name    = "enterprise-security-lab-private-subnet"
+    Project = "enterprise-security-lab"
+  }
+}
 resource "aws_route_table" "security_lab_public" {
   vpc_id = aws_vpc.security_lab.id
 
