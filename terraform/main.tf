@@ -42,6 +42,22 @@ resource "aws_subnet" "security_lab_public" {
     Project = "enterprise-security-lab"
   }
 }
+
+# Private route table
+resource "aws_route_table" "security_lab_private" {
+  vpc_id = aws_vpc.security_lab.id
+
+  tags = {
+    Name    = "enterprise-security-lab-private-rt"
+    Project = "enterprise-security-lab"
+  }
+}
+
+resource "aws_route_table_association" "security_lab_private" {
+  subnet_id      = aws_subnet.security_lab_private.id
+  route_table_id = aws_route_table.security_lab_private.id
+}
+
 # Private subnet
 resource "aws_subnet" "security_lab_private" {
   vpc_id                  = aws_vpc.security_lab.id
