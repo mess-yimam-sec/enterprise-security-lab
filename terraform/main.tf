@@ -70,6 +70,36 @@ resource "aws_subnet" "security_lab_private" {
     Project = "enterprise-security-lab"
   }
 }
+
+# Security group for private resources
+resource "aws_security_group" "security_lab_private" {
+  name        = "enterprise-security-lab-private-sg"
+  description = "Security group for private subnet resources"
+  vpc_id      = aws_vpc.security_lab.id
+
+  ingress {
+    description = "Allow internal VPC traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["10.10.0.0/16"]
+  }
+
+  egress {
+    description = "Allow outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name    = "enterprise-security-lab-private-sg"
+    Project = "enterprise-security-lab"
+  }
+}
+
+
 resource "aws_route_table" "security_lab_public" {
   vpc_id = aws_vpc.security_lab.id
 
