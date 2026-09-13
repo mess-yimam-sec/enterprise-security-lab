@@ -123,12 +123,53 @@ resource "aws_internet_gateway" "security_lab" {
   }
 }
 
+
 resource "aws_route" "security_lab_public_internet" {
   route_table_id         = aws_route_table.security_lab_public.id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.security_lab.id
 
   # Managed by Terraform for the Enterprise Security Lab
+}
+
+# Network ACL for the private subnet
+resource "aws_network_acl" "security_lab_private" {
+  vpc_id = aws_vpc.security_lab.id
+
+  tags = {
+    Name    = "enterprise-security-lab-private-nacl"
+    Project = "enterprise-security-lab"
+  }
+}
+
+# Associate the private subnet with the private NACL
+resource "aws_network_acl_association" "security_lab_private" {
+  network_acl_id = aws_network_acl.security_lab_private.id
+  subnet_id      = aws_subnet.security_lab_private.id
+}
+
+# Allow inbound traffic from within the VPC
+resource "aws_network_acl_rule" "security_lab_private_inbound_vpc" {
+  network_acl_id = aws_network_acl.security_lab_private.id
+  rule_number    = 100
+  egress         = false
+  protocol       = "-1"
+  rule_action    = "allow"
+  cidr_block     = "10.10.0.0/16"
+  from_port      = 0
+  to_port        = 0
+}
+
+# Allow outbound traffic to within the VPC
+resource "aws_network_acl_rule" "security_lab_private_outbound_vpc" {
+  network_acl_id = aws_network_acl.security_lab_private.id
+  rule_number    = 100
+  egress         = true
+  protocol       = "-1"
+  rule_action    = "allow"
+  cidr_block     = "10.10.0.0/16"
+  from_port      = 0
+  to_port        = 0
 }
 
 
