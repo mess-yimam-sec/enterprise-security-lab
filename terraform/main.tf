@@ -171,5 +171,82 @@ resource "aws_network_acl_rule" "security_lab_private_outbound_vpc" {
   from_port      = 0
   to_port        = 0
 }
+# Add cloudwatch flow logs
+resource "aws_cloudwatch_log_group" "security_lab_vpc_flow_logs" {
+  name              = "/enterprise-security-lab/vpc-flow-logs"
+  retention_in_days = 3
 
+  tags = {
+    Name    = "enterprise-security-lab-vpc-flow-logs"
+    Project = "enterprise-security-lab"
+  }
+}
+# aws_iam_role for vpv_flow_logs
+resource "aws_iam_role" "security_lab_vpc_flow_logs" {
+  name = "EnterpriseSecurityLab-VPCFlowLogs"
+
+  tags = {
+    Name    = "enterprise-security-lab-vpc-flow-logs"
+    Project = "enterprise-security-lab"
+  }
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+# IAM Role permission policy
+resource "aws_iam_role_policy" "security_lab_vpc_flow_logs" {
+  name = "EnterpriseSecurityLab-VPCFlowLogs-CloudWatch"
+
+  role = aws_iam_role.security_lab_vpc_flow_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+
+        ]
+
+        Resource = "*"
+      }
+    ]
+  })
+}
+#Aws_aws_flow_log
+
+resource "aws_flow_log" "security_lab_private" {
+  subnet_id    = aws_subnet.security_lab_private.id
+  traffic_type = "ALL"
+
+  iam_role_arn         = aws_iam_role.security_lab_vpc_flow_logs.arn
+  log_destination      = aws_cloudwatch_log_group.security_lab_vpc_flow_logs.arn
+  log_destination_type = "cloud-watch-logs"
+
+  max_aggregation_interval = 600
+
+  tags = {
+    Name    = "enterprise-security-lab-private-flow-log"
+    Project = "enterprise-security-lab"
+  }
+}
 
