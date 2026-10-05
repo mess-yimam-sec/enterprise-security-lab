@@ -249,4 +249,39 @@ resource "aws_flow_log" "security_lab_private" {
     Project = "enterprise-security-lab"
   }
 }
+data "aws_ssm_parameter" "amazon_linux_2023_ami" {
+  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+}
+resource "aws_instance" "security_lab_flow_log_test" {
+  ami           = data.aws_ssm_parameter.amazon_linux_2023_ami.value
+  instance_type = "t3.micro"
 
+  subnet_id                   = aws_subnet.security_lab_private.id
+  vpc_security_group_ids      = [aws_security_group.security_lab_private.id]
+  associate_public_ip_address = false
+
+  user_data = <<-EOF
+    #!/bin/bash
+
+    for i in $(seq 1 30); do
+      getent hosts example.com
+      sleep 10
+    done
+  EOF
+
+  metadata_options {
+    http_tokens = "required"
+  }
+
+  root_block_device {
+    volume_size = 8
+    volume_type = "gp3"
+    encrypted   = true
+  }
+
+  tags = {
+    Name    = "enterprise-security-lab-flow-log-test"
+    Project = "enterprise-security-lab"
+    Purpose = "temporary-flow-log-test"
+  }
+}
