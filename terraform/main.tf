@@ -15,6 +15,99 @@ terraform {
   }
 }
 
+resource "aws_iam_role_policy_attachment" "security_lab_ssm_policy" {
+  role       = aws_iam_role.security_lab_ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "security_lab_ssm_profile" {
+  name = "EnterpriseSecurityLab-EC2-SSMProfile"
+  role = aws_iam_role.security_lab_ssm_role.name
+
+  tags = {
+    Name    = "enterprise-security-lab-ec2-ssm-profile"
+    Project = "enterprise-security-lab"
+  }
+}
+
+resource "aws_iam_role" "security_lab_ssm_role" {
+  name = "EnterpriseSecurityLab-EC2-SSMRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name    = "enterprise-security-lab-ec2-ssm-role"
+    Project = "enterprise-security-lab"
+  }
+}
+#Create a security group for VPC endpoints
+
+resource "aws_security_group" "security_lab_ssm_endpoint" {
+  name        = "enterprise-security-lab-ssm-endpoint-sg"
+  description = "Allow private EC2 instances to reach SSM VPC endpoints"
+  vpc_id      = aws_vpc.security_lab.id
+
+  ingress {
+    description = "HTTPS from private subnet"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["10.10.2.0/24"]
+  }
+
+  egress {
+    description = "Allow outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name    = "enterprise-security-lab-ssm-endpoint-sg"
+    Project = "enterprise-security-lab"
+  }
+}
+# Create the first VPC interface
+resource "aws_vpc_endpoint" "security_lab_ssm" {
+  vpc_id              = aws_vpc.security_lab.id
+  service_name        = "com.amazonaws.us-east-1.ssm"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.security_lab_private.id]
+  security_group_ids  = [aws_security_group.security_lab_ssm_endpoint.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name    = "enterprise-security-lab-ssm-endpoint"
+    Project = "enterprise-security-lab"
+  }
+}
+#Create the ssmmessages endpoints
+resource "aws_vpc_endpoint" "security_lab_ssmmessages" {
+  vpc_id              = aws_vpc.security_lab.id
+  service_name        = "com.amazonaws.us-east-1.ssmmessages"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.security_lab_private.id]
+  security_group_ids  = [aws_security_group.security_lab_ssm_endpoint.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name    = "enterprise-security-lab-ssmmessages-endpoint"
+    Project = "enterprise-security-lab"
+  }
+}
+
 provider "aws" {
   region = "us-east-1"
 
@@ -171,7 +264,7 @@ resource "aws_network_acl_rule" "security_lab_private_outbound_vpc" {
   from_port      = 0
   to_port        = 0
 }
-# Add cloudwatch flow logs
+# Add cloudwatch flow logs and 
 resource "aws_cloudwatch_log_group" "security_lab_vpc_flow_logs" {
   name              = "/enterprise-security-lab/vpc-flow-logs"
   retention_in_days = 3
@@ -252,6 +345,7 @@ resource "aws_flow_log" "security_lab_private" {
 data "aws_ssm_parameter" "amazon_linux_2023_ami" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }
+#Attach the IAM instance profile to EC2
 resource "aws_instance" "security_lab_flow_log_test" {
   ami           = data.aws_ssm_parameter.amazon_linux_2023_ami.value
   instance_type = "t3.micro"
@@ -260,6 +354,7 @@ resource "aws_instance" "security_lab_flow_log_test" {
   vpc_security_group_ids      = [aws_security_group.security_lab_private.id]
   associate_public_ip_address = false
   user_data_replace_on_change = true
+  iam_instance_profile        = aws_iam_instance_profile.security_lab_ssm_profile.name
 
   user_data = <<-EOF
   #!/bin/bash
