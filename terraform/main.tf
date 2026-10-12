@@ -347,7 +347,7 @@ data "aws_ssm_parameter" "amazon_linux_2023_ami" {
 }
 #Attach the IAM instance profile to EC2
 resource "aws_instance" "security_lab_flow_log_test" {
-  ami           = data.aws_ssm_parameter.amazon_linux_2023_ami.value
+  ami           = "ami-0d27e0fb3bac4d724"
   instance_type = "t3.micro"
 
   subnet_id                   = aws_subnet.security_lab_private.id
@@ -383,7 +383,7 @@ EOF
 }
 
 resource "aws_instance" "security_lab_flow_log_target" {
-  ami           = data.aws_ssm_parameter.amazon_linux_2023_ami.value
+  ami           = "ami-0d27e0fb3bac4d724"
   instance_type = "t3.micro"
 
   subnet_id                   = aws_subnet.security_lab_private.id
